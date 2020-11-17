@@ -158,15 +158,31 @@
             }
 
             socket.onclose = function(){
-                console.log('closing...')
+                var warningSpace = document.getElementById("warningSpace")
+                warningSpace.innerHTML = ''
+                var el = document.createElement("p")
+                var text = document.createTextNode("you are not connected, please refresh the page")
+                el.appendChild(text)
+                el.style.color = 'red'
+                warningSpace.appendChild(el)
+
+                window.alert("You disconnected to the server please refresh the page")
             }
 
             function enterButton(){
                 if (!canSend) {
                     username = window.prompt("Type your username")
                     socket.send(JSON.stringify({
-                    enter_room: username
+                        enter_room: username
                     }));
+
+                    var warningSpace = document.getElementById("warningSpace")
+                    warningSpace.innerHTML = ''
+                    var el = document.createElement("p")
+                    var text = document.createTextNode("you are not connected, please refresh the page")
+                    el.appendChild(text)
+                    el.style.color = 'red'
+                    warningSpace.appendChild(el)
                 }
             }
 
