@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="description" content="frontend implementation for the chat room">
+        <meta name="keywords" content="chat, room">
+        <meta name="author" content="Lucas Kyoshi Miyazaki">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title> ChatRoom </title>
+        <style>
+            body {
+                font: "open Sans";
+                background-color: rgba(236, 234, 234, 0.986);
+            }
+            #title{
+                background-color: aqua;
+                color: white;
+                overflow: hidden;
+                padding: 14px 16px;
+                margin-top: -10px;
+                margin-right: -10px;
+                margin-left: -10px;
+            }
+            #warningSpace{
+                background-color: orange;
+                color: white;
+                padding: 0.1px 10px;
+                margin-top: -21px;
+                margin-bottom: 10px;
+                margin-right: -10px;
+                margin-left: -10px;
+            }
+            #warning{
+                color: red
+            }
+            #messageSpace{
+                background-color: white;
+                height: 400px;
+                width:auto;
+                border:1px solid #ccc;
+                border-radius: 12px;
+                overflow:auto;
+                padding: 1px 10px;
+                margin-bottom: 10px;
+                box-shadow: 0 2px 5px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
+            }
+            #initialMessage{
+                color: orange;
+            }
+            #controlSpace{
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+            }
+            form {
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+            }
+            #fmsg{
+                width: 100%;
+            }
+           
+        </style> 
+    </head>
+    <body>
+        <h1 id="title"> The ChatRoom </h1>
+
+        <div id="warningSpace">
+            <p id="warning">you are not connected</p>
+        </div>
+
+        <div id="messageSpace">
+            <p id="initialMessage">the room was created</p>
+        </div>
+        
+        <div id="controlSpace">
+            <form>
+                <!--<label for="fmsg">Write your message:</label><br>-->
+                <input type="text" id="fmsg" name="fmsg"><br>
+                <!--<label for="selectReceiver">Who do you want to send the message to:</label><br>-->
+                <select id="selectReceiver">
+                    <option>all</option>
+                </select>
+            </form> 
+            <button class="popup-trigger" onclick="sendButton()" data-modal="modal-1">send </button>
+        </div>
+        
+        <script>
+
+            var socket = new WebSocket("ws://127.0.0.1:50007");
+            var canSend = false
+            var username
+            var who_is_in = []
+            var server_error = ''
+            var message = ''
+            var sender = ''
+
+            enterButton()
+
+            socket.onmessage = function(str) {
+                var hash = JSON.parse(str.data)
+                console.log(hash)
+
+                if ('ack' in hash) {
+                    if (hash.ack) {
+                        canSend = true
+
+                        var warningSpace = document.getElementById("warningSpace")
+                        warningSpace.innerHTML = ''
+
+                        var el = document.createElement("h3")
+                        var text = document.createTextNode(username)
+                        el.appendChild(text)
+                        warningSpace.appendChild(el)
+                    }else{
+                        window.alert("Invalid name, choose a new one")
+                        enterButton()
+                    }
+                }
+                if ('who_is_in' in hash && canSend) {
+                    who_is_in = hash.who_is_in
+                    var select = document.getElementById("selectReceiver")
+                    select.innerHTML = ''
+
+                    var el = document.createElement("option")
+                    el.text = "all"
+                    el.vaue = "all"
+                    select.add(el)
+
+                    for(var i = 0; i < who_is_in.length; i++) {
+                        var user = who_is_in[i]
+
+                        el = document.createElement("option")
+                        el.text = user
+                        el.vaue = user
+
+                        select.add(el)
+                    }
+                }
+                if ('error' in hash) {
+                    server_error = hash.error
+                    window.alert(server_error)
+                }
+                if ('recv_msg' in hash && canSend) {
+                    message = hash.recv_msg.message
+                    sender = hash.recv_msg.sender
+
+                    var messageSpace = document.getElementById("messageSpace")
+                    var el = document.createElement("p")
+                    var text = document.createTextNode(sender + ': ' + message)
+                    el.appendChild(text)
+                    if (sender == "message from the app") {
+                        el.style.color = "lawngreen"
+                    }
+                    messageSpace.appendChild(el)
+                }
+            }
+
+            socket.onclose = function(){
+                console.log('closing...')
+            }
+
+            function enterButton(){
+                if (!canSend) {
+                    username = window.prompt("Type your username")
+                    socket.send(JSON.stringify({
+                    enter_room: username
+                    }));
+                }
+            }
+
+            function sendButton(){
+                if (canSend) {
+                    var myMessage = document.getElementById("fmsg").value
+                    var messageSpace = document.getElementById("messageSpace")
+                    var el = document.createElement("p")
+                    var text = document.createTextNode('me: ' + myMessage)
+                    el.appendChild(text)
+                    el.style.color = "blue"
+                    messageSpace.appendChild(el)
+
+                    socket.send(JSON.stringify({
+                    send_msg: {
+                        sender: username,
+                        receiver: document.getElementById("selectReceiver").value,
+                        message: myMessage
+                        }
+                    }));
+                }
+            }
+
+
+        </script>
+    </body>
+</html>
